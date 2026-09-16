@@ -79,7 +79,7 @@
 
 ### L2–L4 — Full Integration Tests
 
-- [ ] 5.3 Create `tests/test_agent_flow.py` — **deferred to PR 2** (this is PR 1 of the stacked-to-main 2-PR chain; PR 2 branches `feature/f-b5-agent-core-integration` from `main` after PR 1 merges). Cases to cover in PR 2:
+- [x] 5.3 Create `tests/test_agent_flow.py` — implemented in PR 2 (`feature/f-b5-agent-core-integration`, branched from `main` after PR 1 merged). Cases covered:
   - **L2**: Script a single final message; invoke with zero tools; assert answer matches and bound_tools == 5.
   - **L3**: Script get_erp_data call → final message; invoke; assert tool was called (via seen messages), result in context.
   - **L4 Happy Path**: Script get_erp_data → calculate_tax_discrepancy → search_regulations (1 snippet) → create_erp_adjustment → final; assert exact call order, `notify_human` never called.
