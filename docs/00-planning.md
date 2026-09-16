@@ -9,7 +9,7 @@ sistema de agentes autónomos: recibe una consulta en lenguaje natural, consulta
 SQL, busca normativa en un PDF (RAG) y decide entre notificar a un humano o
 generar un ajuste en el ERP.
 
-## Alcance por parte (del enunciado original)
+## Alcance por parte (enunciado original)
 
 1. **Diseño de arquitectura y estrategia de IA** — diagrama de flujo + KPIs de evaluación (LLMOps).
 2. **Implementación técnica** — agente con function calling, RAG con metadata filtering, API FastAPI con streaming.
@@ -29,45 +29,62 @@ generar un ajuste en el ERP.
 | Infra | Bicep (nativo Azure, más simple que Terraform para Container Apps) con VNet integration / Private Endpoint | Parte 3.2 — tráfico no sale de la red privada. |
 | Evaluación LLMOps | Script con Ragas (Faithfulness, Answer Relevancy) | Parte 1.2. |
 
-## Alcance de SDD (Spec-Driven Development)
+## Alcance de SDD
 
-No todas las partes ameritan el mismo tratamiento — se reserva SDD (proposal →
-spec → design → tasks) solo donde hay ambigüedad de diseño real a resolver
-antes de codear:
+SDD (proposal → spec → design → tasks → apply) solo donde hay ambigüedad de
+diseño real. Documento directo donde el entregable es texto/explicación.
 
-- **Parte 1** (diagrama + estrategia LLMOps) → documento directo, sin spec/tasks.
-- **Parte 2** (agente + tools + RAG + API) → **vía SDD** — es el core con decisiones de arquitectura.
-- **Parte 3.1** (middleware de seguridad) → **vía SDD** — lógica no trivial.
-- **Parte 3.2** (script Bicep + explicación) → documento/script directo.
-- **Parte 4** (incidentes/liderazgo) → documento directo, es una respuesta escrita.
+## Desglose por features
 
-## Estructura del repo
+Cada feature es una unidad de trabajo independiente: archivos propios, sin
+pisar el trabajo de otra feature, para poder trabajarlas en paralelo desde
+distintas sesiones/PCs sin conflictos de merge.
+
+### Track A — Documentación (sin dependencias de código, 100% paralelizable)
+
+| Feature | Entregable | Ruta | Depende de |
+|---|---|---|---|
+| **F-A1** Arquitectura agéntica | Diagrama Mermaid + guardrails + memoria de sesión | `docs/01-arquitectura-agentica.md` | — |
+| **F-A2** Estrategia LLMOps | KPIs (Faithfulness, Answer Relevance) + framework (Ragas/Phoenix) | `docs/01-estrategia-llmops.md` | — |
+| **F-A3** Despliegue Azure | Diseño + script Bicep, VNet/Private Endpoint | `docs/03-despliegue-azure.md`, `infra/main.bicep` | — |
+| **F-A4** Incidentes y liderazgo | Respuesta escrita drift de modelo + latencia | `docs/04-incidentes-liderazgo.md` | — |
+
+### Track B — Código core (SDD), con dependencias internas
+
+| Feature | Entregable | Ruta | Depende de |
+|---|---|---|---|
+| **F-B1** Mock ERP data layer | `get_erp_data(order_id)` sobre SQLite/SQLAlchemy, queries parametrizadas | `app/tools/erp_data.py` | — |
+| **F-B2** Lógica de discrepancia fiscal | `calculate_tax_discrepancy(amount, region)` | `app/tools/tax_discrepancy.py` | — |
+| **F-B3** Pipeline RAG | Índice Chroma + ingesta + metadata filtering (`year`) | `app/rag/` | — |
+| **F-B4** Guardrail de seguridad | Middleware detección PII/salarios por rol | `app/security/` | — |
+| **F-B5** Agente core (LangGraph) | Grafo de estados: nodos de decisión, ReAct, memoria de sesión | `app/agent/` | F-B1, F-B2, F-B3 |
+| **F-B6** API FastAPI | Endpoint streaming, manejo de errores LLM/ERP caído, integra F-B4 | `app/api/` | F-B5, F-B4 |
+
+**F-B1, F-B2, F-B3, F-B4 no dependen entre sí** → 4 sesiones distintas pueden
+tomarlas en paralelo de inmediato. F-B5 es el punto de integración (requiere
+que B1-B3 estén listas). F-B6 cierra al final.
+
+## Orden de trabajo sugerido (paralelo)
 
 ```
-Logistics-erp-agent/
-  docs/
-    00-planning.md            (este archivo)
-    01-arquitectura-agentica.md  (diagrama Mermaid + guardrails + memoria)
-    01-estrategia-llmops.md      (KPIs, Ragas/Phoenix)
-    03-despliegue-azure.md       (+ infra/main.bicep)
-    04-incidentes-liderazgo.md
-  app/
-    agent/        (grafo LangGraph)
-    tools/         (get_erp_data, calculate_tax_discrepancy)
-    rag/           (índice Chroma + metadata filter)
-    security/      (middleware PII/rol)
-    api/           (FastAPI)
-  infra/
-    main.bicep
-  tests/
-  README.md
+Sesión 1: F-A1 → F-A2 → F-A4         (documentación, sin bloqueos)
+Sesión 2: F-A3                        (Azure/Bicep, sin bloqueos)
+Sesión 3: F-B1 → F-B2                 (tools, sin bloqueos)
+Sesión 4: F-B3                        (RAG, sin bloqueos)
+Sesión 5: F-B4                        (seguridad, sin bloqueos)
+   ↓ (cuando B1+B2+B3 estén mergeadas)
+   F-B5 (agente/LangGraph, integra tools + RAG)
+   ↓
+   F-B6 (API, integra agente + guardrail F-B4)
 ```
 
-## Orden de trabajo propuesto
+Cada feature = 1 rama (`feature/f-b1-erp-mock`, etc.) + 1 PR propio. Evita que
+una sesión toque archivos de otra feature.
 
-1. Parte 1 — diagrama + estrategia LLMOps (documento).
-2. Parte 2 — agente + tools + RAG + API (SDD: propuesta → spec → design → tasks → apply).
-3. Parte 3.1 — middleware de seguridad (SDD).
-4. Parte 3.2 — despliegue Azure (documento + script Bicep).
-5. Parte 4 — incidentes/liderazgo (documento).
-6. README final + video de 5 min.
+## Checklist de entrega final
+
+- [ ] F-A1, F-A2, F-A3, F-A4 (docs)
+- [ ] F-B1, F-B2, F-B3, F-B4, F-B5, F-B6 (código)
+- [ ] `README.md` con instrucciones de arranque
+- [ ] `requirements.txt`
+- [ ] Video de 5 min (cara visible, decisiones de diseño + demo)
