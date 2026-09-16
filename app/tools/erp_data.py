@@ -66,6 +66,12 @@ def _get_engine() -> Engine:
             os.makedirs(db_dir, exist_ok=True)
         _engine = create_engine(f"sqlite:///{db_path}")
         Base.metadata.create_all(_engine)
+
+        # Imported lazily to avoid a hard import-time dependency cycle
+        # (erp_seed imports ErpOrder from this module).
+        from app.tools.erp_seed import seed_database
+
+        seed_database(_engine)
         _session_factory = sessionmaker(bind=_engine)
     return _engine
 
