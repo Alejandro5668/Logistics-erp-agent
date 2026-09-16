@@ -82,23 +82,17 @@ StubEmbeddingFunction._embed() filters a fixed set of ~25 high-frequency Spanish
 Assessment: sound, additive test-infrastructure only. Confirmed by reading: _STOPWORDS is defined and used exclusively in tests/embedding_stub.py (lines 27-30, 49). store.py's production embedding path (_resolve_embedding_function, lines 45-60) only ever imports and constructs chromadb.utils.embedding_functions.DefaultEmbeddingFunction -- a real ONNX sentence-transformer with no dependency on, or awareness of, this stopword list. The two code paths do not share any code or data; the stopword list cannot influence production retrieval quality, precision, or ranking. This is a legitimate deterministic-test-fixture engineering choice (feature-hashing bag-of-words is a coarse approximation of semantic similarity, and without stopword removal, shared grammar words across all 10 Spanish snippets would swamp the topical signal -- a well-known bag-of-words weakness, not unique to this codebase). design.md's own stub sketch (lines 122-133) was explicitly non-final pseudocode, so this is filling in an implementation detail left open by design, not deviating from a specified algorithm.
 
 Conclusion on both deviations: neither weakens spec compliance, neither touches the production code path, and both are documented with clear technical rationale grounded in the actual limitations of the deterministic stub. Sound engineering judgment, not shortcuts.
-## 6. Flagged Risk (non-blocking) -- requirements.txt chromadb pin
+## 6. Flagged Risk (RESOLVED) -- requirements.txt chromadb pin
 
-requirements.txt currently reads:
+**Status**: RESOLVED — chromadb==0.5.4 exact pin now present in requirements.txt with explanatory comment.
 
-chromadb>=0.5,<0.6
+requirements.txt now correctly reads:
 
-The apply phase reports it had to manually resolve to chromadb==0.5.4 specifically on this Windows environment, because newer 0.5.x releases lack a prebuilt chroma-hnswlib wheel for Windows and otherwise require MSVC Build Tools to compile from source. Verified the currently installed version in this worktree's environment:
+chromadb==0.5.4  # pinned exact: newer 0.5.x releases have no prebuilt chroma-hnswlib wheel for Windows/cp312, forcing an MSVC build
 
-python -c "import chromadb; print(chromadb.__version__)"  ->  0.5.4
+The apply phase reported it had to manually resolve to chromadb==0.5.4 specifically on this Windows environment due to wheel availability constraints. The verify phase originally flagged this as a WARNING because requirements.txt at that time expressed an open range (>=0.5,<0.6) instead of the exact pin. That warning is now resolved: the exact pin has been committed to the main branch (PR #3 for feature/f-b3-rag-pipeline merged to main). The installed version in the final merged state matches the pin exactly.
 
-This confirms the description is accurate and the installed version is exactly the one apply had to pin manually -- but requirements.txt itself still expresses the open range, not the pin.
-
-Risk: any future pip install -r requirements.txt (or pip install -e .) on a clean Windows machine without MSVC Build Tools could silently resolve to a newer 0.5.x release than 0.5.4, hit the missing-wheel build failure, and block onboarding/CI with an opaque native-build error -- with no indication in the repo that the range was known to be unsafe on Windows.
-
-Recommendation: tighten requirements.txt to the exact working version: chromadb==0.5.4
-
-This is consistent with design.md's own Open Questions note: "The chromadb version must be pinned during apply ... If either has drifted in the installed version, fix the pin -- do not work around it in application code." Design anticipated a pin being necessary; apply discovered the concrete Windows constraint but did not propagate it back into requirements.txt. This is a WARNING, not a CRITICAL blocker -- the current environment works and all tests pass -- but it is a real reproducibility gap worth closing before this becomes a silent onboarding failure for the next Windows developer.
+This confirms reproducibility is secured: any future pip install -r requirements.txt on a clean Windows machine will install the exact chromadb==0.5.4 version that shipped with this feature, preventing the silent build-failure gap.
 
 ## 7. Issues Summary
 
@@ -106,7 +100,7 @@ This is consistent with design.md's own Open Questions note: "The chromadb versi
 None.
 
 ### WARNING
-1. requirements.txt pins chromadb>=0.5,<0.6 (range) instead of the exact chromadb==0.5.4 that apply confirmed is required to avoid a Windows wheel-availability build failure. See Section 6. Recommend tightening the pin before merge/archive.
+None. (The chromadb pinning warning from initial verification has been resolved in the merged code.)
 
 ### SUGGESTION
 1. tasks.md task 4.1/4.2 completion notes reference "9 test scenarios" / "9 sub-tests" as the target count; the delivered tests/test_rag_search.py actually contains 16 individual test methods (more granular than the 9 named scenario groups in the task description, not fewer -- no coverage gap). Cosmetic mismatch between planning-doc phrasing and delivered test count; no action required, noted for task-doc accuracy only.
@@ -114,13 +108,13 @@ None.
 
 ## 8. Final Verdict
 
-PASS WITH WARNINGS
+PASS WITH WARNINGS (now PASS — all warnings resolved in merged PR)
 
 - 35/35 tests passing (19 F-B1 regression + 16 new F-B3), confirmed by direct execution, not by trusting the apply report.
 - All 5 spec requirements / 7 scenarios have passing runtime-covering tests.
 - All 8 design architecture decisions verified against actual code.
 - All 16 tasks verified complete and consistent with delivered code.
 - Both documented deviations reviewed and confirmed to be sound, well-reasoned engineering judgment addressing real limitations of the deterministic test stub -- neither weakens spec compliance nor touches the production embedding path.
-- One non-blocking WARNING: requirements.txt's chromadb range should be tightened to the exact working pin (==0.5.4) to prevent a future Windows pip install from silently hitting a wheel-availability build failure.
+- The requirements.txt chromadb pinning warning has been resolved in the merged code: exact pin chromadb==0.5.4 is now committed with explanatory comment.
 
-No CRITICAL issues. Safe to proceed to archive; the requirements.txt pin tightening is recommended but does not need to block archival if tracked separately.
+Safe to archive. All critical and blocking issues resolved.
