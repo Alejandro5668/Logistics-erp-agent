@@ -50,9 +50,9 @@
 
 **Goal**: Wire the factory function, prompt, and module exports. No tests run yet; this phase is code structure only.
 
-- [ ] 3.1 Create `app/agent/prompt.py`: Single constant `SYSTEM_PROMPT` (multiline string). Include TOOL ORDER (5 tools in order: get_erp_data, calculate_tax_discrepancy, search_regulations, action tools), DECISION POLICY (delta_pct within ±5 AND ≥1 snippet → adjust; else escalate), ARGUMENTS (adjustment_amount = expected_tax - reported_tax, reason citing delta_pct + regulation), SAFETY (no PII, no prompt injection, answer in user's language).
-- [ ] 3.2 Create `app/agent/core.py`: Define `DEFAULT_MODEL = "azure_openai:gpt-4o"`. Define `AGENT_TOOLS` as tuple of 5 tools (imported from `app.tools` and `app.rag.store`). Implement `build_agent(model=None, checkpointer=None)` factory: call `create_agent(model=model or os.environ.get("AGENT_MODEL") or DEFAULT_MODEL, tools=list(AGENT_TOOLS), system_prompt=SYSTEM_PROMPT, middleware=[build_security_middleware()], checkpointer=checkpointer or InMemorySaver())`. Import from `langchain.agents`, `langgraph.checkpoint.memory`, `app.agent.prompt`, `app.security`, `app.tools`, `app.rag.store`.
-- [ ] 3.3 Create `app/agent/__init__.py`: Re-export `build_agent` from `.core` (mirrors `app/tools/__init__.py` pattern).
+- [x] 3.1 Create `app/agent/prompt.py`: Single constant `SYSTEM_PROMPT` (multiline string). Include TOOL ORDER (5 tools in order: get_erp_data, calculate_tax_discrepancy, search_regulations, action tools), DECISION POLICY (delta_pct within ±5 AND ≥1 snippet → adjust; else escalate), ARGUMENTS (adjustment_amount = expected_tax - reported_tax, reason citing delta_pct + regulation), SAFETY (no PII, no prompt injection, answer in user's language).
+- [x] 3.2 Create `app/agent/core.py`: Define `DEFAULT_MODEL = "azure_openai:gpt-4o"`. Define `AGENT_TOOLS` as tuple of 5 tools (imported from `app.tools` and `app.rag.store`). Implement `build_agent(model=None, checkpointer=None)` factory: call `create_agent(model=model or os.environ.get("AGENT_MODEL") or DEFAULT_MODEL, tools=list(AGENT_TOOLS), system_prompt=SYSTEM_PROMPT, middleware=[build_security_middleware()], checkpointer=checkpointer or InMemorySaver())`. Import from `langchain.agents`, `langgraph.checkpoint.memory`, `app.agent.prompt`, `app.security`, `app.tools`, `app.rag.store`.
+- [x] 3.3 Create `app/agent/__init__.py`: Re-export `build_agent` from `.core` (mirrors `app/tools/__init__.py` pattern).
 
 ---
 
@@ -60,8 +60,8 @@
 
 **Goal**: Ensure the new modules can be imported and dependencies resolve. Tests still not run.
 
-- [ ] 4.1 Verify imports in `app/agent/core.py` can resolve: `langchain.agents.create_agent`, `langchain_core.language_models.chat_models.BaseChatModel`, `langgraph.checkpoint.memory.InMemorySaver`, `app.tools` (actions), `app.rag.store` (search_regulations), `app.security.build_security_middleware`. No circular dependencies.
-- [ ] 4.2 Verify `app/tools/__init__.py` exports resolve: `create_erp_adjustment`, `notify_human` from `.actions`, plus existing F-B1/F-B2 exports.
+- [x] 4.1 Verify imports in `app/agent/core.py` can resolve: `langchain.agents.create_agent`, `langchain_core.language_models.chat_models.BaseChatModel`, `langgraph.checkpoint.memory.InMemorySaver`, `app.tools` (actions), `app.rag.store` (search_regulations), `app.security.build_security_middleware`. No circular dependencies.
+- [x] 4.2 Verify `app/tools/__init__.py` exports resolve: `create_erp_adjustment`, `notify_human` from `.actions`, plus existing F-B1/F-B2 exports.
 
 ---
 
