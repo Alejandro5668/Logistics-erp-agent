@@ -8,7 +8,9 @@ state between tests.
 
 import pytest
 
+from app.rag import store
 from app.tools import erp_data
+from tests.embedding_stub import StubEmbeddingFunction
 
 
 @pytest.fixture
@@ -31,3 +33,27 @@ def erp_db(tmp_path, monkeypatch):
     erp_data._reset_engine_cache()
     if db_path.exists():
         db_path.unlink()
+
+
+@pytest.fixture
+def regulations_index(tmp_path, monkeypatch):
+    """Point CHROMA_DB_PATH at a temporary Chroma store, isolated per test.
+
+    Resets store's cached client/collection before and after the test (via
+    `_reset_store_cache()`, which also clears Chroma's global system-instance
+    cache) so the lazy `_get_collection()` picks up the temporary path and a
+    fresh client instead of a previous test's cached one. Injects the
+    deterministic `StubEmbeddingFunction` before the collection is ever
+    built, so no test path triggers the real `DefaultEmbeddingFunction()`
+    ONNX download.
+    """
+    db_path = tmp_path / "chroma"
+    monkeypatch.setenv("CHROMA_DB_PATH", str(db_path))
+
+    store._reset_store_cache()
+    store._set_embedding_function(StubEmbeddingFunction())
+    collection = store._get_collection()  # creates + upserts REGULATION_SNIPPETS
+
+    yield collection
+
+    store._reset_store_cache()  # also clears the embedding-function override
