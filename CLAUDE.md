@@ -69,9 +69,9 @@ Nada estricto ni ceremonioso — solo lo mínimo para que cualquiera (tú en otr
 PC, o un evaluador leyendo el historial) entienda qué cambió y por qué sin
 tener que preguntar.
 
-**Ramas** — una por feature de `docs/00-planning.md`, nombrada
-`<tipo>/<id-feature>-<slug-corto>`:
-- `feature/f-b1-erp-mock`, `feature/f-a1-arquitectura`, `docs/f-a4-incidentes`
+**Docs directo a `main`, código por PR** — no todo se trata igual:
+- **Documentación y planeación SDD** (Track A, y las fases `proposal`/`spec`/`design`/`tasks` de Track B) → commit directo a `main`. Es markdown de bajo riesgo, se lee bien commit por commit, no hay código que revisar.
+- **Código real** (fase `apply` de cada feature de Track B) → rama `feature/<id-feature>-<slug-corto>` (ej. `feature/f-b1-erp-mock`), toda la implementación de esa feature en la rama, **un solo PR** al final — no commits sueltos de código directo a main.
 - `fix/<slug>` para arreglos que no pertenecen a una feature planeada.
 
 **Commits** — [Conventional Commits](https://www.conventionalcommits.org/),
