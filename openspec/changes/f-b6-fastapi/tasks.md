@@ -40,19 +40,19 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: API Routes and Application Setup — deferred to PR 2
 
-- [ ] 3.1 Create `app/api/routes/chat.py` with two endpoints: POST /chat returns StreamingResponse with SSE (peek first event for pre-headers error), POST /chat/sync returns JSON ChatResponse (fold events into final response)
-- [ ] 3.2 Create `app/api/app.py` with create_app() factory (register routes, exception handlers), create `app/main.py` with ASGI entrypoint (uvicorn app.main:app)
+- [x] 3.1 Create `app/api/routes/chat.py` with two endpoints: POST /chat returns StreamingResponse with SSE (peek first event for pre-headers error), POST /chat/sync returns JSON ChatResponse (fold events into final response)
+- [x] 3.2 Create `app/api/app.py` with create_app() factory (register routes, exception handlers), create `app/main.py` with ASGI entrypoint (uvicorn app.main:app)
 - [x] 3.3a `requirements.txt` updated with fastapi, uvicorn, httpx (pulled forward into PR 1 — cheap to pin now, versions verified against the installed langchain==1.4.0/langgraph==1.2.11 stack, `pip check` clean)
-- [ ] 3.3b Update `README.md` with run instructions (uvicorn ...) and curl examples for both endpoints — deferred to PR 2
+- [x] 3.3b Update `README.md` with run instructions (uvicorn ...) and curl examples for both endpoints — deferred to PR 2
 
 ## Phase 4: Integration Tests and RED-Line Verification — deferred to PR 2
 
-- [ ] 4.1 Write integration tests for both endpoints: POST /chat and POST /chat/sync with TestClient, verify SSE stream format, verify JSON response structure
-- [ ] 4.2 Write role/guardrail integration tests: identical request with role=EMPLOYEE is blocked (terminal blocked event), same request with role=ADMIN succeeds (terminal done event)
-- [ ] 4.3 Write error-window tests: provider failure before first byte returns HTTP 502/503, failure after headers sent returns terminal error event in stream
+- [x] 4.1 Write integration tests for both endpoints: POST /chat and POST /chat/sync with TestClient, verify SSE stream format, verify JSON response structure
+- [x] 4.2 Write role/guardrail integration tests: identical request with role=EMPLOYEE is blocked (terminal blocked event), same request with role=ADMIN succeeds (terminal done event)
+- [x] 4.3 Write error-window tests: provider failure before first byte returns HTTP 502/503, failure after headers sent returns terminal error event in stream
 - [x] 4.4a RED-line "value-before-label output is never leaked" verified at the PR 1 unit level (`TestRunTurnBlockedSemantics::test_blocked_replaces_prior_content_and_is_the_only_terminal_event` in `tests/test_api_service.py`) — full TestClient-level regression still deferred to PR 2
 - [x] 4.5a RED-line "failed turn cleanup" (E5 regression) verified at the PR 1 unit level (`TestRunTurnFailureHandling::test_failed_turn_is_followed_by_a_clean_turn_on_the_same_thread_id`) — proves `ThreadRegistry` generation remap directly; full checkpointer-level regression via TestClient deferred to PR 2
-- [ ] 4.6 Write thread-continuity test: two sequential requests on same thread_id preserve agent state across turns; verify second turn sees prior context — deferred to PR 2 (requires the real agent + routes)
+- [x] 4.6 Write thread-continuity test: two sequential requests on same thread_id preserve agent state across turns; verify second turn sees prior context — deferred to PR 2 (requires the real agent + routes)
 - [x] 4.7a `pytest -v` green offline for PR 1: all 48 new `tests/test_api_service.py` tests pass alongside the existing 274 tests (322 total, 0 failures) — see Work Unit Evidence below
 
 ---
@@ -123,3 +123,19 @@ Chain strategy: stacked-to-main
 **PR 2 gate**: Full integration suite passes (`pytest tests/test_api_endpoints.py -v`); both endpoints reachable via TestClient; all RED-line regression tests pass; existing 274 tests from F-B1–F-B5 still pass.
 
 **Terminal gate** (sdd-verify): Full test suite; coverage report; manual curl tests against running app (documented in README).
+
+---
+
+## Work Unit Evidence — PR 2 (Phase 3 + Phase 4)
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pytest tests/test_api_endpoints.py -v` → 10 passed, 0 failed |
+| Runtime harness command/scenario and exact result | `pytest -v` (full suite) → 332 passed, 0 failed (322 pre-existing + 10 new `test_api_endpoints.py`); `TestClient` end-to-end over `create_app()` with `build_agent()` + `ScriptedChatModel` (real graph, real security middleware, real SQLite ERP tool for the thread-continuity case) proves the full F-B1..F-B6 stack through real HTTP requests, offline |
+| Rollback boundary | Delete `app/api/routes/`, `app/api/app.py`, `app/main.py`, `tests/test_api_endpoints.py`; revert the `README.md` "API HTTP (F-B6)" section — PR 1's `app/api/{schemas,events,errors,dependencies,service,sse}.py` and `tests/test_api_service.py` are untouched |
+
+Manual smoke checks (not part of `pytest`, run during apply to validate the two-window contract end-to-end before committing):
+- `/chat` + `/chat/sync` reachable via `TestClient`, correct SSE/JSON shapes.
+- Pre-first-byte provider failure → HTTP 503 generic JSON body, no stream opened.
+- Post-first-byte provider failure → HTTP 200 (headers already committed) + terminal `error` SSE frame.
+- `role=EMPLOYEE` vs `role=ADMIN` on an identical restricted-field (`salary`) tool-call proposal → `blocked` vs `done` terminal event.
