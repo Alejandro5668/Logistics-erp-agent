@@ -42,7 +42,7 @@ structured data. Seeding runs from an idempotent script/fixture so tests and dem
 ## Affected Areas
 
 | Area | Impact | Description |
-|------|--------|-------------|
+|------|--------|------------|
 | `app/tools/erp_data.py` | New | Tool + query logic |
 | `app/` package init, seed script, SQLite artifact | New | Bootstrap for first code feature |
 | `tests/` (+ `conftest.py`) | New | First pytest runner setup for the repo |
