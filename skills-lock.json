@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "azure-deploy": {
+      "source": "microsoft/azure-skills",
+      "sourceType": "github",
+      "skillPath": "skills/azure-deploy/SKILL.md",
+      "computedHash": "b51dc940fc7c4dcc585fcd35539b4461efebaa2864255bedf0c736189c10c0cf"
+    }
+  }
+}
