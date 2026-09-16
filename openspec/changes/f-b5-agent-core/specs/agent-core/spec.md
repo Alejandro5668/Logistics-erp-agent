@@ -38,17 +38,23 @@ system MUST NOT hardcode one provider in `app/agent/core.py`.
 
 ### Requirement: Action Tools in `app/tools/actions.py`
 
-`app/tools/actions.py` MUST expose `create_erp_adjustment(order_id, delta,
-reason)` and `notify_human(order_id, reason)`, both `@tool`-decorated,
-returning flat JSON dicts, never raising. `create_erp_adjustment` MUST NOT
-write to `erp_orders`; it returns a simulated receipt only. `notify_human`
-simulates a notification with no real transport.
+`app/tools/actions.py` MUST expose `create_erp_adjustment(order_id,
+adjustment_amount, reason)` and `notify_human(order_id, reason)`, both
+`@tool`-decorated, returning flat JSON dicts, never raising.
+`create_erp_adjustment` MUST NOT write to `erp_orders`; it returns a
+simulated receipt only. `notify_human` simulates a notification with no
+real transport.
+
+Param name clarification: `adjustment_amount = expected_tax - reported_tax`
+(the correction to apply), distinct from `delta_pct` (F-B2's observed
+percentage deviation) — the two names are kept separate on purpose so the
+model cannot conflate the observed deviation with the correction.
 
 #### Scenario: Adjustment returns a receipt without mutating the ERP table
 
-- GIVEN a valid `order_id`, `delta`, and free-text `reason`
+- GIVEN a valid `order_id`, `adjustment_amount`, and free-text `reason`
 - WHEN `create_erp_adjustment` is called
-- THEN it returns a dict receipt with `order_id`, `delta`, a status field
+- THEN it returns a dict receipt with `order_id`, `adjustment_amount`, a status field
 - AND the seeded `erp_orders` row for that `order_id` is unchanged
 
 #### Scenario: Escalation call returns a deterministic record, never raising

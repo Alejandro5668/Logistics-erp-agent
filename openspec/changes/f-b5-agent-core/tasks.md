@@ -31,8 +31,8 @@
 
 **Goal**: Resolve the parameter naming inconsistency and establish the correct dependency versions before any implementation.
 
-- [ ] 1.1 Amend `openspec/changes/f-b5-agent-core/specs/agent-core/spec.md`: Replace all instances of `delta` argument name with `adjustment_amount` in Requirement 3 (Action Tools), both scenarios, and all task references. Add one-line note: "Param name clarification: `adjustment_amount = expected_tax - reported_tax` (the correction), distinct from `delta_pct` (the observed percentage deviation)."
-- [ ] 1.2 Update `requirements.txt`: Change `langchain>=0.3` to `langchain>=1.4,<2` and add `langgraph>=1.2,<2` on new line. Verify existing `langgraph` line exists; if not, add it after langchain line.
+- [x] 1.1 Amend `openspec/changes/f-b5-agent-core/specs/agent-core/spec.md`: Replace all instances of `delta` argument name with `adjustment_amount` in Requirement 3 (Action Tools), both scenarios, and all task references. Add one-line note: "Param name clarification: `adjustment_amount = expected_tax - reported_tax` (the correction), distinct from `delta_pct` (the observed percentage deviation)."
+- [x] 1.2 Update `requirements.txt`: Change `langchain>=0.3` to `langchain>=1.4,<2` and add `langgraph>=1.2,<2` on new line. Verify existing `langgraph` line exists; if not, add it after langchain line.
 
 ---
 
