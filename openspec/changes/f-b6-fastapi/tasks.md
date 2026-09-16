@@ -123,3 +123,19 @@ Chain strategy: stacked-to-main
 **PR 2 gate**: Full integration suite passes (`pytest tests/test_api_endpoints.py -v`); both endpoints reachable via TestClient; all RED-line regression tests pass; existing 274 tests from F-B1–F-B5 still pass.
 
 **Terminal gate** (sdd-verify): Full test suite; coverage report; manual curl tests against running app (documented in README).
+
+---
+
+## Work Unit Evidence — PR 2 (Phase 3 + Phase 4)
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pytest tests/test_api_endpoints.py -v` → 10 passed, 0 failed |
+| Runtime harness command/scenario and exact result | `pytest -v` (full suite) → 332 passed, 0 failed (322 pre-existing + 10 new `test_api_endpoints.py`); `TestClient` end-to-end over `create_app()` with `build_agent()` + `ScriptedChatModel` (real graph, real security middleware, real SQLite ERP tool for the thread-continuity case) proves the full F-B1..F-B6 stack through real HTTP requests, offline |
+| Rollback boundary | Delete `app/api/routes/`, `app/api/app.py`, `app/main.py`, `tests/test_api_endpoints.py`; revert the `README.md` "API HTTP (F-B6)" section — PR 1's `app/api/{schemas,events,errors,dependencies,service,sse}.py` and `tests/test_api_service.py` are untouched |
+
+Manual smoke checks (not part of `pytest`, run during apply to validate the two-window contract end-to-end before committing):
+- `/chat` + `/chat/sync` reachable via `TestClient`, correct SSE/JSON shapes.
+- Pre-first-byte provider failure → HTTP 503 generic JSON body, no stream opened.
+- Post-first-byte provider failure → HTTP 200 (headers already committed) + terminal `error` SSE frame.
+- `role=EMPLOYEE` vs `role=ADMIN` on an identical restricted-field (`salary`) tool-call proposal → `blocked` vs `done` terminal event.
