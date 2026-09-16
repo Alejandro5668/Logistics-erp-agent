@@ -1,0 +1,77 @@
+schema: spec-driven
+project: Logistics-erp-agent
+initialized: "2026-09-15"
+
+context: |
+  Tech stack: Python 3.11+, LangChain create_agent (over LangGraph), FastAPI, SQLAlchemy + SQLite (mock ERP), Chroma (RAG), pytest
+  Architecture: ReAct-based autonomous agent with function calling, FastAPI streaming API, RAG with metadata filtering, security guardrails
+  Testing: pytest framework (configured as project skill); test runner not yet initialized; Strict TDD will be enforced for Track B code
+  Conventions: Conventional Commits (no AI attribution), feature branches per task, Track A (docs/direct), Track B (code/SDD)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes, especially those affecting ERP adjustments or PII handling
+    - Consider security implications for guardrail bypass scenarios
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Document LLM tool calling contracts explicitly
+  design:
+    - Include sequence diagrams for agent reasoning loops and API streaming
+    - Document architecture decisions with rationale (why LangChain create_agent over StateGraph, why Chroma, etc.)
+    - Security-critical designs (F-B4) require threat model and mitigation
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session (2–6h)
+    - F-B1, F-B2, F-B3, F-B4 can run in parallel; F-B5 requires B1–B3 merged; F-B6 requires B5+B4
+  apply:
+    guidelines:
+      - Follow existing code patterns (see architecture-patterns, fastapi-backend-architecture skills)
+      - All Track B code must have at least one pytest test that fails if logic breaks
+    tdd: false
+    test_command: "pytest -v"
+  verify:
+    test_command: "pytest -v --cov=app"
+    build_command: "python -m py_compile app/ tests/"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas affecting agent behavior or ERP integration
+
+testing:
+  strict_tdd_enabled: false
+  detected_date: "2026-09-15"
+  runner: null
+  framework: pytest
+  runner_status: "Not configured yet. pytest skill available; test runner (pytest.ini, conftest.py, CI) not initialized."
+
+  layers:
+    unit:
+      available: false
+      tool: pytest
+    integration:
+      available: false
+      tool: pytest + FastAPI TestClient
+    e2e:
+      available: false
+      tool: null
+
+  coverage:
+    available: false
+    command: "pytest -v --cov=app"
+
+  quality:
+    linter:
+      available: false
+      command: null
+    type_checker:
+      available: false
+      command: null
+    formatter:
+      available: false
+      command: null
+
+notes: |
+  Track B code will enforce strict_tdd: true and require test runner configuration
+  (conftest.py, test discovery in tests/ directory) once the first test is written.
+  This initialization detects pytest as the framework but no active test runner yet.
+  Recommend creating conftest.py and tests/ directory structure in first F-B* feature.
