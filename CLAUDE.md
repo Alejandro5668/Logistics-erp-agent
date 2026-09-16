@@ -62,3 +62,33 @@ Solo Track B de `docs/00-planning.md` (agente, tools, RAG, API, guardrail de
 seguridad) pasa por SDD completo (proposal → spec → design → tasks → apply).
 Track A (documentación: arquitectura, LLMOps, Azure, incidentes) se entrega
 directo, sin ceremonia de spec.
+
+## Ramas y commits
+
+Nada estricto ni ceremonioso — solo lo mínimo para que cualquiera (tú en otra
+PC, o un evaluador leyendo el historial) entienda qué cambió y por qué sin
+tener que preguntar.
+
+**Ramas** — una por feature de `docs/00-planning.md`, nombrada
+`<tipo>/<id-feature>-<slug-corto>`:
+- `feature/f-b1-erp-mock`, `feature/f-a1-arquitectura`, `docs/f-a4-incidentes`
+- `fix/<slug>` para arreglos que no pertenecen a una feature planeada.
+
+**Commits** — [Conventional Commits](https://www.conventionalcommits.org/),
+sin trailer de autoría de IA (nunca `Co-Authored-By: Claude` ni similar):
+```
+<tipo>(<alcance opcional>): <qué cambia, en imperativo>
+```
+- Tipos: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`.
+- Un commit = un cambio lógico. No mezclar, por ejemplo, la tool `get_erp_data`
+  con el middleware de seguridad en el mismo commit aunque se hayan hecho en
+  la misma sesión.
+- El mensaje dice **qué** cambia — el *por qué*, si no es obvio, va en el
+  cuerpo del commit o en la descripción del PR, no en el asunto.
+
+**Ejemplos de este repo:**
+```
+feat(agent): add get_erp_data mock tool
+fix(rag): correct year metadata filter
+docs: add architecture diagram
+```
