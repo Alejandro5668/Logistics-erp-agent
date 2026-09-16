@@ -157,7 +157,10 @@ def resolve_role(raw: object) -> Role:
 
     try:
         if isinstance(raw, str):
-            candidate = raw.strip().upper()
+            # Case-insensitive but NOT whitespace-tolerant: "admin" resolves,
+            # "ADMIN " (stray whitespace) does not — malformed input fails
+            # closed rather than being "helpfully" trimmed.
+            candidate = raw.upper()
             if candidate in Role.__members__:
                 return Role[candidate]
             return Role.EMPLOYEE
