@@ -1,6 +1,6 @@
 # F-A1 — Arquitectura agéntica
 
-Diagrama: [`assets/arquitectura-agentica.html`](assets/arquitectura-agentica.html) (ábrelo en el navegador).
+Diagrama: [`assets/arquitectura-agentica.png`](assets/arquitectura-agentica.png) (imagen estática, no requiere abrir nada) — también disponible como [`assets/arquitectura-agentica.html`](assets/arquitectura-agentica.html) si se prefiere verlo en el navegador. Las 3 tools de consulta (ERP, discrepancia fiscal, RAG) se agrupan en un solo nodo "Herramientas de datos" para mantener el diagrama legible a alto nivel; el detalle de cada una está en la sección de Flujo abajo.
 
 ## Flujo
 
