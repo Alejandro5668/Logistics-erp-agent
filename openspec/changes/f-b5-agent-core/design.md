@@ -263,9 +263,8 @@ lines, or drop `feature/f-b5-agent-core`.
 
 ## Open Questions
 
-- [ ] **Spec wording**: `specs/agent-core/spec.md` names the adjustment arg `delta`; this design uses
-      `adjustment_amount` (the resolved product decision) because `delta` is already F-B2's observed
-      deviation. `sdd-tasks` must carry a one-line spec amendment, or the spec and code diverge.
+- [x] **Spec wording**: resolved in PR 1 (task 1.1) — `specs/agent-core/spec.md` now uses
+      `adjustment_amount` throughout, matching this design. Spec and code no longer diverge.
 - [ ] **Spec scenario "Default construction"**: `create_agent` resolves a string model eagerly via
       `init_chat_model`, so `build_agent()` with **no** arguments needs a provider package and
       credentials and cannot assert wiring offline. The wiring assertion must inject a
