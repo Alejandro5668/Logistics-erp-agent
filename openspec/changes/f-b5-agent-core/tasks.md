@@ -96,7 +96,7 @@
 
 **Goal**: Update user-facing docs and state the offline-only limitation.
 
-- [ ] 6.1 Update `README.md` — **deferred to PR 2**. Document `AGENT_MODEL` environment variable (e.g., `AGENT_MODEL=azure_openai:gpt-4o` or `AGENT_MODEL=openai:gpt-4`). State that `create_erp_adjustment` and `notify_human` are mocked and never mutate the database. Note that the fake model used in tests proves wiring only, not LLM reasoning quality; live-demo verification requires real provider credentials and is a manual step. Document that checkpointer is `InMemorySaver` (in-process only, dies on shutdown; F-B6 will handle durable persistence).
+- [x] 6.1 Update `README.md` — implemented in PR 2. Documents `AGENT_MODEL` environment variable (e.g., `AGENT_MODEL=azure_openai:gpt-4o` or `AGENT_MODEL=openai:gpt-4`). States that `create_erp_adjustment` and `notify_human` are mocked and never mutate the database. Notes that the fake model used in tests proves wiring only, not LLM reasoning quality; live-demo verification requires real provider credentials and is a manual step. Documents that checkpointer is `InMemorySaver` (in-process only, dies on shutdown; F-B6 will handle durable persistence).
 
 ---
 
