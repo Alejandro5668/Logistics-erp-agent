@@ -17,6 +17,7 @@ import os
 from decimal import Decimal
 from typing import Optional
 
+from langchain_core.tools import tool
 from sqlalchemy import String, create_engine, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -104,3 +105,46 @@ def _fetch_order(order_id: str) -> Optional[ErpOrder]:
     with _get_session() as session:
         statement = select(ErpOrder).where(ErpOrder.order_id == order_id)
         return session.scalars(statement).first()
+
+
+def _to_flat_dict(order: ErpOrder) -> dict:
+    """Map an ErpOrder row to a flat, JSON-serializable dict (found case)."""
+    return {
+        "found": True,
+        "order_id": order.order_id,
+        "net_amount": float(order.net_amount),
+        "tax_amount": float(order.tax_amount),
+        "total_amount": float(order.total_amount),
+        "region": order.region,
+        "status": order.status,
+    }
+
+
+def _not_found(order_id: str) -> dict:
+    """Build the deterministic not-found result for a missing/malformed id."""
+    return {
+        "found": False,
+        "order_id": order_id,
+        "message": f"No ERP record found for order_id '{order_id}'.",
+    }
+
+
+@tool
+def get_erp_data(order_id: str) -> dict:
+    """Look up a logistics order in the ERP by its order ID.
+
+    Use this before comparing an invoice against the ERP. Returns the order's
+    net, tax and total amounts, its region and its status.
+
+    Args:
+        order_id: The ERP order identifier, e.g. "ORD-1001".
+    """
+    cleaned_order_id = (order_id or "").strip()
+    if not cleaned_order_id:
+        return _not_found(order_id)
+
+    order = _fetch_order(cleaned_order_id)
+    if order is None:
+        return _not_found(order_id)
+
+    return _to_flat_dict(order)
