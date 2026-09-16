@@ -14,12 +14,12 @@ trabaje aquí.
 
 | Capa | Elección |
 |---|---|
-| Orquestación | LangGraph (sobre LangChain) — ReAct + estado explícito |
-| LLM | `BaseChatModel` de LangChain → Azure OpenAI (gpt-4o), model-agnostic |
+| Orquestación | `create_agent` de LangChain (alto nivel sobre LangGraph) — ReAct + checkpointer, sin `StateGraph` a mano |
+| LLM | Model-agnostic vía `create_agent(model=...)` → Azure OpenAI (gpt-4o) |
 | RAG | Chroma local + metadata filtering (`year`) |
 | "SQL Server" mock | SQLite + SQLAlchemy, queries parametrizadas |
 | API | FastAPI + `StreamingResponse` (SSE) |
-| Seguridad | Middleware de rol + detección de fuga de PII/salarios |
+| Seguridad | Middleware de `create_agent` (hook antes/después del modelo) + detección de fuga de PII/salarios |
 | Infra | Bicep, Azure Container Apps + Azure OpenAI, VNet/Private Endpoint |
 | Evaluación | Ragas (Faithfulness, Answer Relevancy) |
 

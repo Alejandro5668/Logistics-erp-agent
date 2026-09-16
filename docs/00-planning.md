@@ -20,7 +20,7 @@ generar un ajuste en el ERP.
 
 | Capa | Elección | Justificación |
 |---|---|---|
-| Orquestación | LangGraph (sobre LangChain) | La rúbrica exige razonamiento iterativo (ReAct) y manejo de estados explícito, no un prompt lineal. |
+| Orquestación | `create_agent` de LangChain (API de alto nivel construida sobre LangGraph) | Da ReAct + tool-calling + checkpointer (memoria) + streaming de fábrica. Sigue siendo LangGraph por debajo — cumple "razonamiento iterativo y manejo de estados" sin reimplementar un `StateGraph` a mano. |
 | LLM | `BaseChatModel` de LangChain apuntando a Azure OpenAI (gpt-4o) | Model-agnostic: el agente no queda acoplado a un proveedor; calza con el despliegue Azure de la Parte 3. |
 | RAG / vectorstore | Chroma local + metadata filtering (`year: 2024`) | Simple de levantar, cumple el requisito explícito de filtrar por metadata. |
 | "SQL Server" mock | SQLite vía SQLAlchemy, queries parametrizadas | El enunciado permite mock, pero la rúbrica penaliza SQL no parametrizado incluso simulado. |
@@ -56,9 +56,16 @@ distintas sesiones/PCs sin conflictos de merge.
 | **F-B1** Mock ERP data layer | `get_erp_data(order_id)` sobre SQLite/SQLAlchemy, queries parametrizadas | `app/tools/erp_data.py` | — |
 | **F-B2** Lógica de discrepancia fiscal | `calculate_tax_discrepancy(amount, region)` | `app/tools/tax_discrepancy.py` | — |
 | **F-B3** Pipeline RAG | Índice Chroma + ingesta + metadata filtering (`year`) | `app/rag/` | — |
-| **F-B4** Guardrail de seguridad | Middleware detección PII/salarios por rol | `app/security/` | — |
-| **F-B5** Agente core (LangGraph) | Grafo de estados: nodos de decisión, ReAct, memoria de sesión | `app/agent/` | F-B1, F-B2, F-B3 |
+| **F-B4** Guardrail de seguridad | Middleware de `create_agent` (hook antes/después del modelo) que detecta PII/salarios por rol | `app/security/` | — |
+| **F-B5** Agente core | `create_agent` + tools (incl. `create_erp_adjustment`/`notify_human` — el agente decide cuál llamar vía ReAct, no un edge condicional) + checkpointer para memoria de sesión | `app/agent/` | F-B1, F-B2, F-B3 |
 | **F-B6** API FastAPI | Endpoint streaming, manejo de errores LLM/ERP caído, integra F-B4 | `app/api/` | F-B5, F-B4 |
+
+> Decisión "ajuste automático vs. notificar humano": no es un nodo/edge de grafo
+> custom — son dos tools más (`create_erp_adjustment`, `notify_human`) que el
+> agente elige vía su propio ReAct loop, igual que las demás tools. Evita
+> reconstruir en un `StateGraph` a mano lo que `create_agent` ya resuelve
+> (ver `docs/01-arquitectura-agentica.md`, actualizado tras revisar la
+> documentación oficial de LangChain/LangGraph).
 
 **F-B1, F-B2, F-B3, F-B4 no dependen entre sí** → 4 sesiones distintas pueden
 tomarlas en paralelo de inmediato. F-B5 es el punto de integración (requiere
