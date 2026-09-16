@@ -25,34 +25,35 @@ Chain strategy: stacked-to-main
 
 ---
 
-## Phase 1: Foundation (Schemas, Events, Errors, Dependencies)
+## Phase 1: Foundation (Schemas, Events, Errors, Dependencies) — PR 1
 
-- [ ] 1.1 Create `app/api/schemas.py` with Pydantic models: ChatRequest {message, thread_id, role}, ChatResponse {content, thread_id, status}, ErrorResponse {code, message, replace}
-- [ ] 1.2 Create `app/api/events.py` with framework-free AgentEvent union: progress {label}, content {text}, blocked {message, replace}, error {code, message, replace}, done {thread_id, status}
-- [ ] 1.3 Create `app/api/errors.py` with typed exceptions: ProviderUnavailableError, AgentExecutionError, and centralized @app.exception_handler implementations
-- [ ] 1.4 Create `app/api/dependencies.py` with cached agent provider and ThreadRegistry for generation-remap (maps public thread_id → internal {thread_id}#{generation})
+- [x] 1.1 Create `app/api/schemas.py` with Pydantic models: ChatRequest {message, thread_id, role}, ChatResponse {content, thread_id, status}, ErrorResponse {code, message, replace}
+- [x] 1.2 Create `app/api/events.py` with framework-free AgentEvent union: progress {label}, content {text}, blocked {message, replace}, error {code, message, replace}, done {thread_id, status}
+- [x] 1.3 Create `app/api/errors.py` with typed exceptions: ProviderUnavailableError, AgentExecutionError, and centralized @app.exception_handler implementations
+- [x] 1.4 Create `app/api/dependencies.py` with cached agent provider and ThreadRegistry for generation-remap (maps public thread_id → internal {thread_id}#{generation})
 
-## Phase 2: Core Service Logic (Guarded Sink and SSE Serialization)
+## Phase 2: Core Service Logic (Guarded Sink and SSE Serialization) — PR 1
 
-- [ ] 2.1 Create `app/api/service.py` with run_turn() async generator: accept ChatRequest, forward role as context={"role":role}, re-apply inspect_output to each AIMessage before yielding content, drop ToolMessages entirely, map tool_calls to progress events via TOOL_LABELS dict, handle blocked output and exceptions
-- [ ] 2.2 Create `app/api/sse.py` with AgentEvent → SSE frame serializer: convert each event type to JSON with correct data schema and escape fields for SSE compatibility
-- [ ] 2.3 Write unit tests (no agent, no network): sink verdict (inspect_output ALLOW/BLOCK), progress mapping from tool_calls, ToolMessage drop, SSE frame structure, thread-remap generation logic
+- [x] 2.1 Create `app/api/service.py` with run_turn() async generator: accept ChatRequest, forward role as context={"role":role}, re-apply inspect_output to each AIMessage before yielding content, drop ToolMessages entirely, map tool_calls to progress events via TOOL_LABELS dict, handle blocked output and exceptions
+- [x] 2.2 Create `app/api/sse.py` with AgentEvent → SSE frame serializer: convert each event type to JSON with correct data schema and escape fields for SSE compatibility
+- [x] 2.3 Write unit tests (no agent, no network): sink verdict (inspect_output ALLOW/BLOCK), progress mapping from tool_calls, ToolMessage drop, SSE frame structure, thread-remap generation logic
 
-## Phase 3: API Routes and Application Setup
+## Phase 3: API Routes and Application Setup — deferred to PR 2
 
 - [ ] 3.1 Create `app/api/routes/chat.py` with two endpoints: POST /chat returns StreamingResponse with SSE (peek first event for pre-headers error), POST /chat/sync returns JSON ChatResponse (fold events into final response)
 - [ ] 3.2 Create `app/api/app.py` with create_app() factory (register routes, exception handlers), create `app/main.py` with ASGI entrypoint (uvicorn app.main:app)
-- [ ] 3.3 Update `requirements.txt` with fastapi, uvicorn, httpx; update `README.md` with run instructions (uvicorn ...) and curl examples for both endpoints
+- [x] 3.3a `requirements.txt` updated with fastapi, uvicorn, httpx (pulled forward into PR 1 — cheap to pin now, versions verified against the installed langchain==1.4.0/langgraph==1.2.11 stack, `pip check` clean)
+- [ ] 3.3b Update `README.md` with run instructions (uvicorn ...) and curl examples for both endpoints — deferred to PR 2
 
-## Phase 4: Integration Tests and RED-Line Verification
+## Phase 4: Integration Tests and RED-Line Verification — deferred to PR 2
 
 - [ ] 4.1 Write integration tests for both endpoints: POST /chat and POST /chat/sync with TestClient, verify SSE stream format, verify JSON response structure
 - [ ] 4.2 Write role/guardrail integration tests: identical request with role=EMPLOYEE is blocked (terminal blocked event), same request with role=ADMIN succeeds (terminal done event)
 - [ ] 4.3 Write error-window tests: provider failure before first byte returns HTTP 502/503, failure after headers sent returns terminal error event in stream
-- [ ] 4.4 Write RED-line regression test: "value-before-label output is never leaked" — generate output with label-based restricted fields, verify no unconditional value appears unaccompanied by its label prefix
-- [ ] 4.5 Write RED-line regression test: "failed turn cleanup" — a failed turn on thread_id leaves a {thread_id}#{generation} checkpoint; next request on same thread_id bumps generation and completes normally (no poisoning)
-- [ ] 4.6 Write thread-continuity test: two sequential requests on same thread_id preserve agent state across turns; verify second turn sees prior context
-- [ ] 4.7 Run `pytest -v` green offline; verify F-B1–F-B5's existing 274 tests still pass (no regression)
+- [x] 4.4a RED-line "value-before-label output is never leaked" verified at the PR 1 unit level (`TestRunTurnBlockedSemantics::test_blocked_replaces_prior_content_and_is_the_only_terminal_event` in `tests/test_api_service.py`) — full TestClient-level regression still deferred to PR 2
+- [x] 4.5a RED-line "failed turn cleanup" (E5 regression) verified at the PR 1 unit level (`TestRunTurnFailureHandling::test_failed_turn_is_followed_by_a_clean_turn_on_the_same_thread_id`) — proves `ThreadRegistry` generation remap directly; full checkpointer-level regression via TestClient deferred to PR 2
+- [ ] 4.6 Write thread-continuity test: two sequential requests on same thread_id preserve agent state across turns; verify second turn sees prior context — deferred to PR 2 (requires the real agent + routes)
+- [x] 4.7a `pytest -v` green offline for PR 1: all 48 new `tests/test_api_service.py` tests pass alongside the existing 274 tests (322 total, 0 failures) — see Work Unit Evidence below
 
 ---
 
