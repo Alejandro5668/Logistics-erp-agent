@@ -60,6 +60,81 @@ conversación (`thread_id`) se pierde al reiniciar el proceso. No hay
 persistencia durable en este prototipo — queda fuera de alcance (ver F-B6 en
 `docs/00-planning.md`).
 
+## API HTTP (F-B6)
+
+`app/api/` expone el agente por HTTP vía FastAPI: `POST /chat` (streaming
+SSE) y `POST /chat/sync` (JSON, sin streaming). Ambos endpoints comparten
+un único pipeline guardado (`app/api/service.py`'s `run_turn()`) — ningún
+byte llega al cliente sin pasar antes por `inspect_output` (F-B4).
+
+### Levantar el servidor
+
+```
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Por defecto levanta en `http://127.0.0.1:8000`. Requiere `AGENT_MODEL`
+configurada (o el `DEFAULT_MODEL` de `app/agent/core.py`) y credenciales
+válidas del proveedor — a diferencia de `pytest`, esto SÍ toca un LLM real
+en el primer request (`get_agent()` construye y cachea el agente vía
+`build_agent()`, sin `model=` override).
+
+### `POST /chat` — streaming SSE
+
+```
+curl -N -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "reconcile ORD-1001", "thread_id": "demo-1", "role": "ADMIN"}'
+```
+
+Salida (frames `text/event-stream`; el protocolo completo de eventos está
+documentado en `openspec/changes/f-b6-fastapi/design.md`'s Interfaces /
+Contracts):
+
+```
+event: progress
+data: {"label":"Looking up ERP order data..."}
+
+event: content
+data: {"text":"Ajuste simulado para ORD-1001."}
+
+event: done
+data: {"thread_id":"demo-1","status":"ok"}
+```
+
+Un `role="EMPLOYEE"` sobre un campo restringido (p. ej. `salary`,
+`bank_account`) termina el stream con un evento `blocked` en vez de
+`done` — el mismo request con `role="ADMIN"` completa normalmente
+(spec: "Role and Thread_id Propagation").
+
+### `POST /chat/sync` — JSON, sin streaming
+
+```
+curl -X POST http://127.0.0.1:8000/chat/sync \
+  -H "Content-Type: application/json" \
+  -d '{"message": "reconcile ORD-1001", "thread_id": "demo-1", "role": "ADMIN"}'
+```
+
+Respuesta:
+
+```json
+{"content": "Ajuste simulado para ORD-1001.", "thread_id": "demo-1", "status": "ok"}
+```
+
+### Manejo de errores (dos ventanas)
+
+- Un fallo del proveedor (timeout, rate limit, auth, red) **antes** del
+  primer byte responde HTTP `502`/`503` con un cuerpo JSON genérico
+  (`{"code", "message", "replace"}`), sin abrir el stream.
+- Un fallo **después** de que las cabeceras SSE ya se enviaron termina el
+  stream con un evento `error` — el código de estado ya no puede cambiar
+  a esa altura (`app/api/routes/chat.py`'s `_sse_body`, design.md
+  "Decision: Two error windows").
+
+Ningún caso filtra detalles del proveedor, stack traces, ni filas del ERP
+al cliente.
+
 ## Tests
 
 ```
@@ -68,4 +143,7 @@ pytest -v
 ```
 
 Suite completa offline: ninguna prueba requiere red, credenciales de
-proveedor LLM, ni `AGENT_MODEL` configurada.
+proveedor LLM, ni `AGENT_MODEL` configurada. Los tests de `app/api/`
+(`tests/test_api_service.py`, `tests/test_api_endpoints.py`) usan
+`app.dependency_overrides` + `ScriptedChatModel` (F-B5) para sustituir
+`get_agent()` — nunca tocan un proveedor real.
