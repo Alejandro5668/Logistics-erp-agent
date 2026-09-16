@@ -27,6 +27,7 @@ def erp_db(tmp_path, monkeypatch):
 
     yield engine
 
+    engine.dispose()  # release the SQLite file handle before cleanup (Windows)
     erp_data._reset_engine_cache()
     if db_path.exists():
         db_path.unlink()
