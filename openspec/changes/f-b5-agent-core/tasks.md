@@ -79,7 +79,7 @@
 
 ### L2–L4 — Full Integration Tests
 
-- [ ] 5.3 Create `tests/test_agent_flow.py` — **deferred to PR 2** (this is PR 1 of the stacked-to-main 2-PR chain; PR 2 branches `feature/f-b5-agent-core-integration` from `main` after PR 1 merges). Cases to cover in PR 2:
+- [x] 5.3 Create `tests/test_agent_flow.py` — implemented in PR 2 (`feature/f-b5-agent-core-integration`, branched from `main` after PR 1 merged). Cases covered:
   - **L2**: Script a single final message; invoke with zero tools; assert answer matches and bound_tools == 5.
   - **L3**: Script get_erp_data call → final message; invoke; assert tool was called (via seen messages), result in context.
   - **L4 Happy Path**: Script get_erp_data → calculate_tax_discrepancy → search_regulations (1 snippet) → create_erp_adjustment → final; assert exact call order, `notify_human` never called.
@@ -96,7 +96,7 @@
 
 **Goal**: Update user-facing docs and state the offline-only limitation.
 
-- [ ] 6.1 Update `README.md` — **deferred to PR 2**. Document `AGENT_MODEL` environment variable (e.g., `AGENT_MODEL=azure_openai:gpt-4o` or `AGENT_MODEL=openai:gpt-4`). State that `create_erp_adjustment` and `notify_human` are mocked and never mutate the database. Note that the fake model used in tests proves wiring only, not LLM reasoning quality; live-demo verification requires real provider credentials and is a manual step. Document that checkpointer is `InMemorySaver` (in-process only, dies on shutdown; F-B6 will handle durable persistence).
+- [x] 6.1 Update `README.md` — implemented in PR 2. Documents `AGENT_MODEL` environment variable (e.g., `AGENT_MODEL=azure_openai:gpt-4o` or `AGENT_MODEL=openai:gpt-4`). States that `create_erp_adjustment` and `notify_human` are mocked and never mutate the database. Notes that the fake model used in tests proves wiring only, not LLM reasoning quality; live-demo verification requires real provider credentials and is a manual step. Documents that checkpointer is `InMemorySaver` (in-process only, dies on shutdown; F-B6 will handle durable persistence).
 
 ---
 
