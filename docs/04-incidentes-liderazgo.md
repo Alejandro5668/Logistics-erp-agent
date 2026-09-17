@@ -1,33 +1,33 @@
 # F-A4 — Gestión de incidentes y liderazgo
 
-## Escenario: drift de modelo (GPT-4 → GPT-4o) aprobando notas de crédito erróneas
+## Escenario: tras actualizar el modelo, el agente aprueba ajustes erróneos
 
-### Investigación de causa raíz
+### Cómo investigaría la causa raíz
 
-1. **Congelar el blast radius primero, investigar después.** Ver rollback abajo — no se investiga con el sistema todavía aprobando ajustes incorrectos en producción.
-2. **Tracing (Arize Phoenix/LangSmith, ver `docs/01-estrategia-llmops.md`):** comparar, para los casos fallidos, la traza completa contra casos equivalentes pre-actualización. La pregunta concreta: ¿el guardrail dejó pasar algo que antes bloqueaba, o el orquestador está llamando mal a `calculate_tax_discrepancy` (argumentos distintos, tool skip, formato de salida distinto que rompe el parsing aguas abajo)?
-3. **Diffear el comportamiento del modelo, no asumir "el modelo es peor".** GPT-4o cambia formato de tool-calling, tono, y sensibilidad a instrucciones respecto a GPT-4 — la causa más probable no es "el modelo alucina más" sino que el prompt/parsing estaba implícitamente afinado para el formato de respuesta de GPT-4 y GPT-4o rompe ese supuesto no documentado.
-4. **Correlacionar con el golden dataset (abajo):** si el dataset ya existía, correrlo contra GPT-4o aísla inmediatamente si es un problema de prompt/parsing (el dataset ya lo hubiera detectado antes de producción) o algo nuevo específico de los datos reales en producción.
+1. **Primero se contiene el daño, después se investiga.** Con el sistema todavía aprobando ajustes incorrectos, lo primero es el rollback (ver abajo), no el diagnóstico.
+2. **Revisar el registro detallado de cada ejecución** (ver la estrategia de evaluación en `docs/01-estrategia-llmops.md`), comparando los casos que fallaron contra casos equivalentes de antes de la actualización. La pregunta concreta es: ¿el filtro de seguridad dejó pasar algo que antes bloqueaba, o el agente está llamando mal a la herramienta que calcula el impuesto (con otros argumentos, saltándose el paso, o con un formato de respuesta distinto que rompe algo más adelante en el proceso)?
+3. **No asumir que "el modelo nuevo es peor" sin comprobarlo.** Un modelo nuevo puede cambiar su forma de llamar herramientas, su tono, o qué tan literal es con las instrucciones — lo más probable no es que el modelo alucine más, sino que el diseño original dependía, sin que quedara escrito en ningún lado, de un comportamiento específico del modelo anterior.
+4. **Correlacionar contra el conjunto de casos de referencia** (el "golden dataset", ver abajo): si ya existía antes del incidente, correrlo contra el modelo nuevo dice de inmediato si el problema es del diseño del agente — y ya se hubiera detectado antes de llegar a producción — o si es algo nuevo, propio de los datos reales.
 
-### Rollback
+### Proceso de rollback
 
-1. Revertir el alias/versión del modelo a GPT-4 de inmediato — es la mitigación de menor riesgo y más rápida, no requiere entender la causa raíz primero.
-2. Si el sistema tiene *feature flag* de modelo (recomendado, ver Arquitectura model-agnostic en `CLAUDE.md`), el rollback es un cambio de config, no un deploy.
-3. Poner en cuarentena manual (no auto-revertir en el ERP) cualquier ajuste ya aprobado automáticamente desde que se desplegó GPT-4o hasta el rollback — necesitan revisión humana uno por uno, porque ya hubo confianza depositada en una decisión potencialmente errónea.
+1. Volver de inmediato a la versión anterior del modelo. Es la solución más rápida y de menor riesgo, y no requiere entender la causa raíz primero.
+2. Si el modelo se selecciona por configuración en vez de estar fijo en el código (como en este proyecto), el rollback es solo cambiar esa configuración, no volver a desplegar nada.
+3. Poner en cuarentena manual, sin revertir automáticamente, cualquier ajuste que se haya aprobado solo desde que se activó el modelo nuevo hasta el rollback. Cada uno necesita revisión de una persona, porque ya se confió en una decisión que puede estar mal.
 
-### Golden Dataset — para que no se repita
+### Golden dataset — para que no se repita
 
-- Un dataset versionado (en el repo, no en una hoja de cálculo aparte) de casos reales: prompt, contexto esperado, tool calls esperadas con sus argumentos, y el resultado correcto (ajuste vs. escalar).
-- Cada incidente de producción confirmado (como este) se agrega como caso de regresión permanente — el dataset crece con el tiempo, no se escribe una sola vez al inicio.
-- Se corre en **CI, como gate bloqueante, antes de cualquier cambio de modelo o de prompt** — no solo cuando alguien se acuerda de correrlo. Un upgrade de modelo (GPT-4 → GPT-4o) es exactamente el tipo de cambio que debe disparar esta corrida, igual que un cambio de código dispara la suite de tests.
-- Métrica de aceptación explícita: 0 regresiones en exactitud numérica financiera (ver KPI en `docs/01-estrategia-llmops.md`) — este KPI específico no admite tolerancia, a diferencia de Faithfulness/Relevancy donde un pequeño margen es aceptable.
+- Un conjunto de casos reales, guardado como parte del proyecto (no en una hoja de cálculo aparte): la pregunta original, qué información se esperaba que el agente consultara, y cuál era la decisión correcta.
+- Cada incidente confirmado en producción, como este, se agrega a ese conjunto como un caso permanente que nunca debe volver a fallar. El conjunto crece con el tiempo, no se define una sola vez al principio.
+- Se ejecuta automáticamente antes de cualquier cambio de modelo o de instrucciones del agente, no solo cuando alguien se acuerda de correrlo a mano. Un cambio de modelo es exactamente el tipo de evento que debería disparar esta verificación, de la misma forma que un cambio de código dispara la ejecución de tests.
+- La exactitud de los montos financieros no admite ningún margen de error en esta verificación — a diferencia de otras métricas de calidad de texto, donde una pequeña variación sí es aceptable.
 
-## Liderazgo técnico: Frontend se queja de 15-20s de latencia
+## Liderazgo técnico: el equipo de frontend reporta 15 a 20 segundos de espera
 
-No se ataca con "hacer el modelo más rápido" — se ataca con percepción y con paralelismo real:
+No se resuelve solo tratando de que el modelo piense más rápido — se resuelve trabajando la percepción de espera y evitando pasos innecesariamente secuenciales:
 
-1. **Streaming de tokens** (ya en el diseño de la API, `docs/00-planning.md` F-B6) — el usuario ve texto apareciendo en ~1-2s en vez de esperar 15-20s de pantalla en blanco. Esto solo resuelve percepción, no el tiempo real.
-2. **Paralelizar tool calls independientes.** Si el orquestador necesita `get_erp_data` y el RAG normativo para la misma pregunta, no hay razón de negocio para llamarlos en serie — correrlos concurrentemente puede recortar varios segundos reales, no solo percibidos.
-3. **Estado intermedio explícito en el streaming** — emitir eventos tipo "Consultando ERP...", "Revisando normativa..." en vez de silencio hasta el token final. Reduce ansiedad de espera sin tocar el modelo.
-4. **Cachear la capa RAG** (embeddings + resultados de metadata filtering) para preguntas normativas recurrentes — no todo el tráfico necesita re-embeddear la pregunta y re-buscar contra el índice.
-5. **Lo que NO se propone:** cambiar a un modelo más chico/barato para ganar velocidad — eso compromete precisión en un dominio financiero, y el enunciado pide explícitamente no sacrificarla.
+1. **Mostrar la respuesta a medida que se genera**, en vez de esperar a tenerla completa. El usuario empieza a ver texto en uno o dos segundos en lugar de una pantalla en blanco por 15 o 20. Esto mejora la percepción, no reduce el tiempo real de principio a fin.
+2. **Ejecutar en paralelo las consultas que no dependen una de la otra.** Si el agente necesita revisar el ERP y buscar la normativa aplicable para la misma pregunta, no hay ninguna razón para hacerlo en dos pasos separados en vez de al mismo tiempo — esto sí reduce tiempo real.
+3. **Mostrar el paso en el que va el agente** ("consultando el ERP", "revisando la normativa") en lugar de silencio hasta tener la respuesta final. Reduce la sensación de espera sin tocar el modelo.
+4. **Guardar en caché las búsquedas de normativa más repetidas**, para no tener que rehacer la búsqueda completa cada vez que se pregunta algo similar.
+5. **Lo que no propondría:** cambiar a un modelo más chico o más barato solo para ganar velocidad. Eso compromete la precisión en un dominio financiero, y la prueba pide explícitamente no sacrificarla.
