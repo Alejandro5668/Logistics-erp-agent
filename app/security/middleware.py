@@ -33,7 +33,7 @@ from app.security.guardrail import AgentOutput, ToolCall, Verdict, inspect_input
 # adapter-side failure (mapping messages, calling `role_resolver`) happens
 # BEFORE the pure core's own try/except can produce a `GUARDRAIL_ERROR`
 # decision. Fail-closed, same generic text, never echoes internals.
-_ADAPTER_SAFE_MESSAGE = "I cannot assist with that request."
+_ADAPTER_SAFE_MESSAGE = "I cannot assist with that request. / No puedo ayudarte con esa solicitud."
 
 
 def _role_from_context(context: Any) -> object:

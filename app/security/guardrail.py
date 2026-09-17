@@ -20,7 +20,7 @@ from enum import Enum
 from app.security.injection import MAX_SCAN_CHARS, find_injection
 from app.security.roles import RESTRICTED_FIELDS, Role, find_restricted_fields, resolve_role
 
-_SAFE_MESSAGE = "I cannot assist with that request."
+_SAFE_MESSAGE = "I cannot assist with that request. / No puedo ayudarte con esa solicitud."
 
 _MAX_TOOL_ARG_DEPTH = 5
 

@@ -393,7 +393,7 @@ class TestRunTurnBlockedSemantics:
                 # the middleware's own, later, independently-computed BLOCK:
                 {
                     "SecurityGuardrailMiddleware.after_model": {
-                        "messages": [AIMessage(content="I cannot assist with that request.")],
+                        "messages": [AIMessage(content="I cannot assist with that request. / No puedo ayudarte con esa solicitud.")],
                         "jump_to": "end",
                     }
                 },
@@ -404,7 +404,7 @@ class TestRunTurnBlockedSemantics:
 
         events = [e async for e in run_turn(request, agent, registry)]
 
-        assert events == [BlockedEvent(message="I cannot assist with that request.")]
+        assert events == [BlockedEvent(message="I cannot assist with that request. / No puedo ayudarte con esa solicitud.")]
 
     @pytest.mark.anyio
     async def test_direct_jump_to_block_uses_the_updates_own_safe_message(self):
@@ -413,7 +413,7 @@ class TestRunTurnBlockedSemantics:
             chunks=[
                 {
                     "SecurityGuardrailMiddleware.before_model": {
-                        "messages": [AIMessage(content="I cannot assist with that request.")],
+                        "messages": [AIMessage(content="I cannot assist with that request. / No puedo ayudarte con esa solicitud.")],
                         "jump_to": "end",
                     }
                 }
@@ -424,7 +424,7 @@ class TestRunTurnBlockedSemantics:
 
         events = [e async for e in run_turn(request, agent, registry)]
 
-        assert events == [BlockedEvent(message="I cannot assist with that request.")]
+        assert events == [BlockedEvent(message="I cannot assist with that request. / No puedo ayudarte con esa solicitud.")]
 
     @pytest.mark.anyio
     async def test_blocked_replaces_prior_content_and_is_the_only_terminal_event(self):
@@ -549,9 +549,9 @@ class TestFormatSSE:
         assert frame == 'event: content\ndata: {"text":"hello"}\n\n'
 
     def test_blocked_event_frame_carries_replace_true(self):
-        frame = format_sse(BlockedEvent(message="I cannot assist with that request."))
+        frame = format_sse(BlockedEvent(message="I cannot assist with that request. / No puedo ayudarte con esa solicitud."))
 
-        assert frame == 'event: blocked\ndata: {"message":"I cannot assist with that request.","replace":true}\n\n'
+        assert frame == 'event: blocked\ndata: {"message":"I cannot assist with that request. / No puedo ayudarte con esa solicitud.","replace":true}\n\n'
 
     def test_error_event_frame(self):
         frame = format_sse(ErrorEvent(code="provider_unavailable", message="unavailable"))
