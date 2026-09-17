@@ -1,0 +1,9 @@
+# Optional LLM provider client packages. Installed together (in the Docker
+# image, or manually for local runs) so the app works out of the box no
+# matter which AGENT_MODEL prefix is set in .env (openai / azure_openai /
+# anthropic) — zero extra `pip install` step to remember.
+#
+# Not part of requirements.txt on purpose: app/agent/core.py is
+# model-agnostic (design.md) and must not hard-depend on one provider's SDK.
+langchain-openai
+langchain-anthropic

@@ -1,0 +1,13 @@
+.git
+.env
+data/
+tests/
+docs/
+openspec/
+infra/
+.claude/
+.agents/
+.atl/
+__pycache__/
+*.pyc
+.pytest_cache/
