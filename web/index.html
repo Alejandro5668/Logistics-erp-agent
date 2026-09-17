@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logistics ERP Agent — Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>
+        <span class="status-dot" id="statusDot" aria-hidden="true"></span>
+        Logistics ERP Agent
+      </h1>
+      <div class="sub">Demo local — sesión <span id="threadLabel" class="thread-id"></span> · <span id="statusText">Listo</span></div>
+    </div>
+    <div class="controls">
+      <div class="role-field">
+        <label for="role">Rol</label>
+        <select id="role" data-role="ADMIN">
+          <option value="EMPLOYEE">EMPLOYEE</option>
+          <option value="FINANCE_MANAGER">FINANCE_MANAGER</option>
+          <option value="ADMIN" selected>ADMIN</option>
+        </select>
+      </div>
+      <button class="secondary" id="newSession" title="Reinicia el thread_id y borra el historial visible">Nueva sesión</button>
+    </div>
+  </header>
+
+  <div class="quick-prompts" id="quickPrompts"></div>
+
+  <div class="messages" id="messages" aria-live="polite" aria-relevant="additions">
+    <div class="empty-hint" id="emptyHint">
+      <div class="empty-icon" aria-hidden="true">💬</div>
+      Usa los botones de arriba para ejecutar los casos de prueba típicos,<br>
+      o escribe tu propia consulta abajo.
+    </div>
+  </div>
+
+  <form class="composer" id="composer">
+    <input type="text" id="messageInput" placeholder="Escribe tu consulta..." autocomplete="off" aria-label="Mensaje para el agente">
+    <button type="submit" id="sendBtn">Enviar</button>
+  </form>
+</div>
+
+<script src="sse.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
