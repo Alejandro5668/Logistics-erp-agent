@@ -1,265 +1,120 @@
 # Logistics-erp-agent
 
-Agente de inteligencia artificial que revisa facturas de logística contra los
-datos del ERP de una empresa y detecta si hay una discrepancia en el monto de
-impuestos cobrado. Es un prototipo hecho para una prueba técnica (Senior AI
-Backend Engineer — Castor), no un sistema en producción.
+Agente de IA que revisa facturas de logística contra el ERP de una empresa y
+detecta si el impuesto cobrado en una orden es correcto. Prototipo para una
+prueba técnica (Senior AI Backend Engineer — Castor), no un sistema en
+producción.
 
-## Qué hace exactamente
+## Qué hace
 
-1. Un usuario escribe una pregunta en lenguaje natural, por ejemplo: "¿por
-   qué hay una discrepancia en la orden ORD-1004?".
-2. El agente busca el pedido en una base de datos que simula el ERP, calcula
-   si el impuesto cobrado coincide con lo que debería ser según la región de
-   esa orden, y busca en un conjunto de normativas si hay algo que
-   justifique la diferencia.
-3. Con esa información, el agente decide una de dos cosas: generar un ajuste
-   automático en el ERP (simulado — no escribe nada real en ninguna base de
-   datos) o escalar el caso a un humano para que lo revise.
-4. Antes de que cualquier respuesta salga, un filtro de seguridad revisa dos
-   cosas: que no se esté filtrando información restringida (salarios, datos
-   personales) a alguien sin el rol adecuado, y que el usuario no esté
-   intentando manipular al agente con instrucciones escondidas en su
-   mensaje.
+1. El usuario pregunta en lenguaje natural, por ejemplo: "¿por qué hay una
+   discrepancia en la orden ORD-1004?".
+2. El agente busca la orden en una base de datos que simula el ERP, calcula
+   si el impuesto cobrado coincide con lo esperado según la región, y
+   revisa si existe alguna normativa que justifique la diferencia.
+3. Decide entre generar un ajuste automático (simulado, no escribe nada
+   real) o escalar el caso a una persona.
+4. Antes de responder, un filtro de seguridad revisa que no se filtre
+   información restringida a alguien sin el rol adecuado, y que el mensaje
+   no intente manipular al agente.
 
-Todo esto corre local, en tu máquina. No hay nada desplegado en un servidor
-real ni en Azure — el despliegue en Azure es solo un diseño (explicado más
-abajo).
+Todo corre en local. El despliegue en Azure es solo un diseño (ver más
+abajo), nunca se ejecutó.
 
 ---
 
-## Cómo probarlo tú mismo
+## Cómo levantarlo
 
-Dos caminos: con Docker (un solo comando, recomendado) o instalando Python
-directo en tu máquina. Cualquiera de los dos requiere una clave de API de
-algún proveedor de IA (Azure OpenAI, OpenAI o Anthropic) — sin eso, el
-agente no puede correr de verdad (los tests sí corren sin clave, ver abajo).
+Necesita una clave de API de un proveedor de IA (Azure OpenAI, OpenAI o
+Anthropic) — sin eso el agente no responde de verdad. Los tests sí corren
+sin ninguna clave.
 
-### Opción A — Con Docker (recomendado, un solo comando)
-
-```
-cp .env.example .env
-```
-
-Abre `.env` y descomenta UNA sección (Azure OpenAI, Anthropic u OpenAI),
-con tu clave y el modelo que quieras usar (por ejemplo
-`AGENT_MODEL=anthropic:claude-haiku-4-5-20251001`). Después:
+**Con Docker (recomendado, un solo comando):**
 
 ```
+cp .env.example .env        # completar con tu clave y el modelo elegido
 docker compose up --build
 ```
 
-Eso construye la imagen (ya incluye los tres paquetes de proveedor, así
-funciona sin importar cuál elegiste en `.env`) y deja todo corriendo en
-`http://localhost:8000`. No hay que instalar Python, ni pip, ni nada más
-a mano.
+Deja todo corriendo en `http://localhost:8000`, sin instalar nada más.
 
-### Opción B — Con Python instalado en tu máquina
-
-Necesitas Python 3.12. Desde la carpeta del proyecto:
+**Con Python instalado en tu máquina:**
 
 ```
 pip install -r requirements.txt
+pip install langchain-openai      # o langchain-anthropic, según tu proveedor
+cp .env.example .env              # completar con tu clave
+uvicorn app.main:app --reload
 ```
 
-Para correr los tests (no necesita ninguna clave de API):
+**Tests** (no necesitan ninguna clave de API):
 
 ```
 pytest -v
 ```
 
-Debe terminar en "332 passed". Esto prueba que todo el código funciona bien
-— la base de datos, la búsqueda de normativa, el filtro de seguridad, el
-armado del agente, la API — sin necesidad de conectarse a ningún proveedor
-de IA real. Para los tests se usa un modelo de lenguaje falso que responde
-con mensajes ya escritos de antemano, así se puede probar el flujo completo
-sin gastar dinero en llamadas a una IA real ni necesitar internet.
+Debe terminar en "332 passed".
 
-Para levantar la API de verdad:
+**Probarlo:**
 
-```
-cp .env.example .env
-```
+- Desde el navegador: `http://localhost:8000/demo/` — interfaz de chat con
+  los casos de prueba típicos ya armados en botones.
+- Con curl, streaming:
+  ```
+  curl -N -X POST http://localhost:8000/chat -H "Content-Type: application/json" \
+    -d '{"message": "reconcile ORD-1001", "thread_id": "demo-1", "role": "ADMIN"}'
+  ```
+- Con curl, sin streaming: el mismo request a `/chat/sync`.
 
-Edita `.env` igual que en la Opción A, e instala el paquete del proveedor
-que elegiste. `requirements.txt` los deja afuera a propósito: el agente no
-depende de un proveedor específico (`AGENT_MODEL` decide cuál en tiempo de
-ejecución), así que el paquete del cliente se instala aparte, según cuál
-uses:
-
-```
-pip install langchain-openai      # Azure OpenAI u OpenAI
-pip install langchain-anthropic   # Anthropic
-```
-
-Luego:
-
-```
-uvicorn app.main:app --reload
-```
-
-Esto lo deja corriendo en `http://127.0.0.1:8000` (con Docker o sin él).
-
-### Probarlo desde el navegador (más fácil para una demo)
-
-Con la API corriendo (cualquiera de las dos opciones), abre:
-
-```
-http://localhost:8000/demo/
-```
-
-Es una interfaz de chat mínima (`web/`, no forma parte de lo que pide la
-prueba técnica, es solo una ayuda visual): tiene botones con los casos de
-prueba típicos ya armados (una discrepancia real, una orden sin problemas,
-una orden que no existe, un intento de pedir un dato restringido, un
-intento de manipular al agente), un selector de rol, y un botón "Nueva
-sesión" para reiniciar la conversación.
-
-### Probarlo con curl (sin interfaz)
-
-**Con streaming** (la respuesta va llegando en pedazos, como en un chat):
-
-```
-curl -N -X POST http://127.0.0.1:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "reconcile ORD-1001", "thread_id": "demo-1", "role": "ADMIN"}'
-```
-
-**Sin streaming** (una sola respuesta completa en JSON):
-
-```
-curl -X POST http://127.0.0.1:8000/chat/sync \
-  -H "Content-Type: application/json" \
-  -d '{"message": "reconcile ORD-1001", "thread_id": "demo-1", "role": "ADMIN"}'
-```
-
-`thread_id` identifica la conversación (para que el agente recuerde
-preguntas anteriores en la misma sesión). `role` es el rol del usuario que
-pregunta (`EMPLOYEE`, `FINANCE_MANAGER` o `ADMIN`) — si preguntas por un
-dato restringido con el rol `EMPLOYEE`, el agente lo bloquea; con `ADMIN`
-lo permite.
+`role` puede ser `EMPLOYEE`, `FINANCE_MANAGER` o `ADMIN` — determina qué
+información restringida puede pedir. `thread_id` identifica la
+conversación, para que el agente recuerde el contexto entre preguntas.
 
 ---
 
-## Cómo está organizado el código
+## Cómo está organizado
 
 ```
-app/
-  tools/      → funciones que el agente puede llamar: consultar el ERP,
-                calcular el impuesto esperado, aprobar un ajuste, avisar
-                a un humano
-  rag/        → búsqueda de normativa (el "RAG")
-  security/   → el filtro de seguridad (guardrail)
-  agent/      → arma el agente completo, uniendo todo lo de arriba
-  api/        → expone el agente como una API web (FastAPI)
-web/          → interfaz de chat mínima para probar la API desde el
-                navegador (/demo) — no es parte de lo que pide la prueba
-                técnica, es solo una ayuda visual, sin build ni dependencias
-docs/         → toda la documentación pedida en la prueba: diagrama,
-                estrategia de evaluación, diseño de Azure, respuestas del
-                escenario de incidentes
-infra/        → diseño de la infraestructura de Azure (nunca desplegado)
-tests/        → pruebas automáticas de cada parte del proyecto
-openspec/     → historial completo de decisiones de diseño (ver siguiente
-                sección)
-Dockerfile, docker-compose.yml → arrancar todo con un solo comando
-                (`docker compose up --build`), ver arriba
+app/tools/    → consultar el ERP, calcular el impuesto esperado, aprobar un ajuste, avisar a un humano
+app/rag/      → búsqueda de normativa
+app/security/ → filtro de seguridad (guardrail)
+app/agent/    → arma el agente completo
+app/api/      → expone el agente como API (FastAPI)
+web/          → interfaz de demo en el navegador (/demo), no es parte de la prueba técnica
+docs/         → toda la documentación pedida en la prueba
+infra/        → diseño de infraestructura de Azure (nunca desplegado)
+tests/        → pruebas automáticas
+openspec/     → historial de decisiones de diseño (ver abajo)
 ```
 
----
+## Cómo se construyó
 
-## Cómo se construyó este proyecto
+La documentación (arquitectura, LLMOps, Azure, incidentes) se escribió
+directo. El código (agente, herramientas, API) siguió un proceso de diseño
+por especificación: antes de programar cada parte, se definió por escrito
+qué debía cumplir, cómo se iba a construir y por qué, y solo después se
+implementó y se verificó contra esa definición. El historial completo de
+esas decisiones queda en `openspec/changes/archive/`.
 
-Se hizo con Claude Code, usando dos formas de trabajo distintas según la
-parte:
+## Piezas del proyecto
 
-- **La documentación** (diagrama, estrategia de evaluación, diseño de
-  Azure, respuestas del escenario de incidentes) se escribió directo, sin
-  ningún proceso formal — son documentos de texto, no había una decisión
-  de diseño real que resolver antes de escribirlos.
-
-- **El código** (el agente, las herramientas, la API) se hizo con un
-  proceso llamado **SDD (Spec-Driven Development)**. Esto significa que
-  antes de escribir cualquier línea de código, se escribía primero:
-
-  1. Una **propuesta**: qué se va a hacer y por qué.
-  2. Una **especificación**: qué debe cumplir exactamente el código, con
-     casos de uso concretos.
-  3. Un **diseño técnico**: cómo se va a construir, qué archivos, qué
-     decisiones de arquitectura y por qué.
-  4. Una lista de **tareas** concretas y chequeables.
-  5. Recién ahí se implementaba el código.
-  6. Después se **verificaba** que el código cumpliera exactamente con lo
-     que decía la especificación, con una revisión aparte.
-  7. Al final se **archivaba** el cambio, guardando el historial completo
-     de esas cinco etapas.
-
-  Ese historial completo quedó guardado en la carpeta
-  `openspec/changes/archive/` — ahí se puede ver, por ejemplo, por qué se
-  usó SQLite en vez de una base de datos real, o por qué el filtro de
-  seguridad terminó dividido en dos partes en vez de una.
-
----
-
-## Cómo se dividió el trabajo (features)
-
-El proyecto se partió en piezas pequeñas e independientes, para poder
-trabajar cada una por separado sin que una rompiera a otra:
-
-| Pieza | Qué hace | Dónde está el código |
+| Pieza | Qué hace | Código |
 |---|---|---|
 | F-B1 | Consulta simulada al ERP | `app/tools/erp_data.py` |
 | F-B2 | Calcula si el impuesto cobrado está bien | `app/tools/tax_discrepancy.py` |
 | F-B3 | Busca normativa relevante (RAG) | `app/rag/` |
-| F-B4 | Filtro de seguridad (datos restringidos, intentos de manipulación) | `app/security/` |
-| F-B5 | Arma el agente completo uniendo las 4 piezas de arriba | `app/agent/` |
-| F-B6 | Expone el agente como API web | `app/api/` |
+| F-B4 | Filtro de seguridad | `app/security/` |
+| F-B5 | Arma el agente completo | `app/agent/` |
+| F-B6 | Expone el agente como API | `app/api/` |
 
-Las primeras cuatro piezas (F-B1 a F-B4) no dependen entre sí — se podían
-hacer en cualquier orden. F-B5 necesita que las primeras tres ya existan,
-porque las une en un solo agente. F-B6 necesita F-B5 y F-B4 terminados,
-porque los expone al mundo a través de la API.
-
-Cada pieza se entregó como su propio Pull Request en GitHub, y cada una
-pasó por el proceso completo de SDD (propuesta → especificación → diseño →
-tareas → código → verificación) antes de mergearse a la rama principal.
-Dos piezas grandes (el filtro de seguridad y la API) se dividieron además
-en dos Pull Requests cada una, porque el cambio era demasiado grande para
-revisar de una sola vez.
+F-B1 a F-B4 son independientes entre sí. F-B5 los une en un solo agente.
+F-B6 expone ese agente al mundo.
 
 ---
 
-## Guías de calidad (skills) usadas para generar el código
+## Dónde está cada parte de la prueba técnica
 
-Además del proceso SDD, se usaron guías específicas de buenas prácticas
-("skills" de Claude Code) para que el código generado siguiera un estándar
-concreto, no genérico:
-
-| Skill | Para qué se usó |
-|---|---|
-| `architecture-patterns` | Decidir cómo estructurar cada módulo nuevo antes de escribirlo |
-| `solid-principles` | Que cada función o clase tenga una sola responsabilidad clara |
-| `fastapi-backend-architecture` | Estructura correcta de la API (rutas, dependencias, streaming) |
-| `api-contract-first` | Definir primero qué recibe y qué devuelve cada endpoint, antes de programarlo |
-| `pytest` | Que cada pieza de código tenga al menos un test que falle si la lógica se rompe |
-| `azure-deploy` (de Microsoft) | Diseño correcto del despliegue en Azure: identidad sin contraseñas, red privada |
-| `diagram-design` | Generar el diagrama de arquitectura de forma clara y profesional |
-
----
-
-## Sobre el despliegue en Azure
-
-`infra/main.bicep` es solo el **diseño** de cómo se desplegaría este
-proyecto en Azure (Container Apps + Azure OpenAI, con la red configurada
-para que el tráfico no salga a internet). Ese script nunca se ejecutó — no
-hay nada corriendo en Azure ahora mismo. La explicación completa de esa
-decisión está en `docs/03-despliegue-azure.md`.
-
----
-
-## Dónde está la respuesta a cada parte de la prueba técnica
-
-| Parte de la prueba | Dónde está |
+| Parte | Dónde está |
 |---|---|
 | Diagrama de arquitectura | `docs/assets/arquitectura-agentica.png` |
 | Estrategia de evaluación (LLMOps) | `docs/01-estrategia-llmops.md` |
@@ -269,35 +124,16 @@ decisión está en `docs/03-despliegue-azure.md`.
 
 ---
 
-## Herramientas que no hacen nada real (mocks)
+## Detalles que vale la pena saber
 
-`create_erp_adjustment` y `notify_human` (en `app/tools/actions.py`) son
-simulaciones deterministas, a propósito:
-
-- `create_erp_adjustment` **nunca** escribe en la base de datos del ERP;
-  devuelve un recibo simulado con `applied: false`.
-- `notify_human` **nunca** envía una notificación real; devuelve un ticket
-  simulado con `notified: false`.
-
-Así, ningún flujo del agente puede dejar datos en un estado inconsistente,
-porque ninguna de las dos acciones tiene un efecto real fuera del proceso.
-
-## Memoria de sesión
-
-El agente recuerda la conversación dentro de un mismo `thread_id` mientras
-el proceso esté corriendo (usando un componente de LangGraph llamado
-`InMemorySaver`). Si reinicias el servidor, esa memoria se pierde — no hay
-una base de datos persistente para esto en este prototipo.
-
-## Manejo de errores en la API
-
-- Si el proveedor de IA falla (tiempo de espera agotado, límite de
-  peticiones, credenciales inválidas) **antes** de que empiece a responder,
-  la API devuelve un error HTTP 502 o 503 con un mensaje genérico.
-- Si el proveedor falla **después** de que ya empezó a enviar la respuesta
-  en streaming, la conexión termina con un mensaje de error dentro del
-  mismo stream (ya no se puede cambiar el código de estado HTTP a esa
-  altura).
-
-En ningún caso se filtran detalles internos del proveedor, ni un stack
-trace, ni datos del ERP al usuario final.
+- **Las acciones son simuladas.** `create_erp_adjustment` y `notify_human`
+  (`app/tools/actions.py`) nunca escriben ni notifican nada real — devuelven
+  un resultado simulado, así ningún flujo puede dejar datos en un estado
+  inconsistente durante una prueba.
+- **La memoria de sesión vive en el proceso.** El agente recuerda la
+  conversación dentro de un mismo `thread_id` mientras el servidor esté
+  corriendo; se pierde si se reinicia.
+- **Manejo de errores:** si el proveedor de IA falla antes de responder, la
+  API devuelve un error HTTP genérico (502/503). Si falla después de
+  empezar a responder en streaming, el error llega dentro del mismo stream.
+  En ningún caso se exponen detalles internos ni datos del ERP.
