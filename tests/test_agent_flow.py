@@ -263,7 +263,7 @@ class TestL4GuardrailBeforeModel:
         )
 
         assert model.index == 0
-        assert result["messages"][-1].content == "I cannot assist with that request."
+        assert result["messages"][-1].content == "I cannot assist with that request. / No puedo ayudarte con esa solicitud."
         assert _tool_messages(result["messages"]) == []
 
 
@@ -294,7 +294,7 @@ class TestL4GuardrailMidLoop:
         )
 
         assert model.index == 1  # the model was stepped once, proposing the blocked call
-        assert result["messages"][-1].content == "I cannot assist with that request."
+        assert result["messages"][-1].content == "I cannot assist with that request. / No puedo ayudarte con esa solicitud."
         assert _tool_messages(result["messages"]) == []  # tool never ran, no receipt
 
 

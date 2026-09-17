@@ -19,7 +19,14 @@ from app.api.routes.chat import router as chat_router
 def create_app() -> FastAPI:
     """Build a fresh FastAPI app: PR 1's `ProviderUnavailableError` /
     `AgentExecutionError` handlers registered first (so they exist before
-    any request can be routed), then the `/chat` and `/chat/sync` routes."""
+    any request can be routed), then the `/chat` and `/chat/sync` routes.
+
+    Deliberately API-only: no static files, no demo UI. Every test in
+    `tests/` builds its app through this factory, so anything mounted here
+    would be part of every test app too. The optional `/demo` browser UI is
+    mounted in `app/main.py` instead (the process entrypoint tests never
+    import) — see that module's docstring.
+    """
     app = FastAPI(title="Logistics ERP Agent API")
 
     for exc_type, handler in EXCEPTION_HANDLERS.items():

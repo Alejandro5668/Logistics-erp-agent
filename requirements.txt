@@ -7,3 +7,4 @@ chromadb==0.5.4  # pinned exact: newer 0.5.x releases have no prebuilt chroma-hn
 fastapi>=0.141,<1  # verified installed: 0.141.1, compatible with pydantic 2.13.5 already required by langchain 1.4.0
 uvicorn>=0.52,<1  # verified installed: 0.52.4
 httpx>=0.28,<1  # verified installed: 0.28.1; TestClient dependency for PR 2's integration suite
+python-dotenv>=1.0,<2  # loads .env into os.environ at app startup — see app/main.py

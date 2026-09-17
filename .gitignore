@@ -7,3 +7,4 @@ chroma_db/
 *.db
 data/
 .pytest_cache/
+.codegraph/
